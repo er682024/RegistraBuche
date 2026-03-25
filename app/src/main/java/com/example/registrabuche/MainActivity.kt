@@ -1,4 +1,4 @@
-@file:Suppress("SpellCheckingInspection") // Italian strings: buca, buche, rilevata, etc.
+@file:Suppress("SpellCheckingInspection")
 
 package com.example.registrabuche
 
@@ -13,6 +13,7 @@ import android.view.KeyEvent
 import android.widget.Button
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -22,13 +23,13 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import android.annotation.SuppressLint
 
 class MainActivity : AppCompatActivity() {
@@ -38,6 +39,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var locationManager: LocationManager
 
     private val markerMap = mutableMapOf<Pair<Double, Double>, Marker>()
+    private val viewModel: MainViewModel by viewModels()
+
     private var lastSaveTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,8 +65,16 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+        // 🔴 Pulsante REC → evento ViewModel
         findViewById<Button>(R.id.btnRegister).setOnClickListener {
-            saveCurrentLocation()
+            viewModel.onRegisterButtonPressed()
+        }
+
+        // 🟢 Osservatore dell’evento → chiama saveCurrentLocation()
+        viewModel.saveLocationEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let {
+                saveCurrentLocation()
+            }
         }
 
         requestPermissions()
@@ -82,6 +93,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateMapMarkers(buche: List<Buca>) {
         val currentKeys = buche.map { it.latitude to it.longitude }.toSet()
+
         val iterator = markerMap.entries.iterator()
         while (iterator.hasNext()) {
             val entry = iterator.next()
@@ -93,12 +105,6 @@ class MainActivity : AppCompatActivity() {
 
         for (buca in buche) {
             val key = buca.latitude to buca.longitude
-
-            // TODO: implement marker color tinting based on status and age
-            // Color.GREEN   = resolved
-            // Color.MAGENTA = unresolved + older than 30 days
-            // Color.YELLOW  = updated after insertion
-            // Color.RED     = new/active
 
             markerMap.getOrPut(key) {
                 Marker(map).apply {
@@ -115,6 +121,7 @@ class MainActivity : AppCompatActivity() {
                 marker.relatedObject = buca
             }
         }
+
         map.invalidate()
     }
 
@@ -156,7 +163,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_VOLUME_DOWN,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_DPAD_CENTER -> {
-                saveCurrentLocation()
+                viewModel.onHardwareKeyPressed()
                 true
             }
             else -> super.onKeyDown(keyCode, event)
@@ -192,10 +199,6 @@ class MainActivity : AppCompatActivity() {
                         locationManager.removeUpdates(this)
                         processLocation(l)
                     }
-
-                    @Deprecated("Deprecated in Java")
-                    @Suppress("DEPRECATION")
-                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
 
                     override fun onProviderEnabled(provider: String) {}
                     override fun onProviderDisabled(provider: String) {}
