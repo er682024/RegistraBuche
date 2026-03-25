@@ -22,7 +22,7 @@
         android:layout_height="120dp"
         android:layout_marginBottom="32dp"
         android:layout_marginEnd="16dp"
-        android:text="REC"
+        android:text="@string/btn_register"
         android:textSize="20sp"
         android:textStyle="bold"
         android:backgroundTint="@android:color/holo_red_dark"

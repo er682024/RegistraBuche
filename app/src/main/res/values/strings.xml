@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">RegistraBuche</string>
+    <string name="btn_register">REC</string>
 </resources>
